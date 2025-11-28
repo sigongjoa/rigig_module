@@ -59,7 +59,9 @@ export class CharacterLoader {
       }
 
       // 3. AnimationMixer 생성
-      const mixer = new THREE.AnimationMixer(mesh);
+      // 중요: 믹서는 메시가 아닌 최상위 FBX 그룹(루트)에 연결해야 함
+      // 그래야 뼈대(Armature)와 메시가 형제 관계일 때도 애니메이션이 정상 작동함
+      const mixer = new THREE.AnimationMixer(fbx);
 
       // 4. 뼈대 정보 추출
       const skeleton = mesh.skeleton;

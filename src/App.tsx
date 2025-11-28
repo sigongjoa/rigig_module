@@ -51,7 +51,7 @@ function App() {
         setStatus('Adding character to scene...');
 
         // 5. Add character mesh to renderer
-        renderer.addCharacterMesh(character.mesh);
+        renderer.addCharacter(character.rawFbx || character.mesh, character.mesh);
 
         // 6. Play animation if available
         if (character.animations.length > 0) {

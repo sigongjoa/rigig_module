@@ -95,7 +95,8 @@ function RiggingTest() {
             setStatus(`Bones: ${stats.totalBones} total, ${stats.standardBones} standard`);
 
             // 7. Add character mesh to renderer
-            renderer.addCharacterMesh(character.mesh);
+            // Use rawFbx (root) if available, otherwise fallback to mesh
+            renderer.addCharacter(character.rawFbx || character.mesh, character.mesh);
 
             // 8. Play animation if available
             if (character.animations.length > 0) {
@@ -113,30 +114,31 @@ function RiggingTest() {
                 // Game Logic: Movement
                 if (characterRef.current && !isAttacking.current) {
                     const speed = 300 * deltaTime; // Increased speed for visibility
-                    const mesh = characterRef.current.mesh;
+                    // Move the ROOT object (fbx) so mesh and skeleton move together
+                    const targetObject = characterRef.current.rawFbx || characterRef.current.mesh;
 
                     // Forward/Backward (Z-axis)
                     if (keysPressed.current['w'] || keysPressed.current['arrowup']) {
-                        mesh.position.z += speed;
+                        targetObject.position.z += speed;
                     }
                     if (keysPressed.current['s'] || keysPressed.current['arrowdown']) {
-                        mesh.position.z -= speed;
+                        targetObject.position.z -= speed;
                     }
                     // Left/Right (X-axis)
                     if (keysPressed.current['d'] || keysPressed.current['arrowright']) {
-                        mesh.position.x += speed;
+                        targetObject.position.x += speed;
                     }
                     if (keysPressed.current['a'] || keysPressed.current['arrowleft']) {
-                        mesh.position.x -= speed;
+                        targetObject.position.x -= speed;
                     }
 
                     // Update debug position (throttled)
                     frameCounter.current++;
                     if (frameCounter.current % 5 === 0) { // Update faster (every 5 frames)
                         setCharPos({
-                            x: parseFloat(mesh.position.x.toFixed(1)),
-                            y: parseFloat(mesh.position.y.toFixed(1)),
-                            z: parseFloat(mesh.position.z.toFixed(1))
+                            x: parseFloat(targetObject.position.x.toFixed(1)),
+                            y: parseFloat(targetObject.position.y.toFixed(1)),
+                            z: parseFloat(targetObject.position.z.toFixed(1))
                         });
                     }
                 }

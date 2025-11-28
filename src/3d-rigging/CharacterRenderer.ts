@@ -114,33 +114,49 @@ export class CharacterRenderer {
   }
 
   /**
-   * 캐릭터 메시를 씬에 추가
-   * @param mesh SkinnedMesh 객체
+   * 캐릭터 모델을 씬에 추가
+   * @param root 캐릭터의 최상위 루트 객체 (FBX Group 등)
+   * @param mesh 실제 렌더링될 SkinnedMesh (바운딩 박스 계산용)
    */
-  addCharacterMesh(mesh: THREE.SkinnedMesh): void {
+  addCharacter(root: THREE.Object3D, mesh: THREE.SkinnedMesh): void {
     // 메시 크기 확인 (디버그용)
     const bbox = new THREE.Box3().setFromObject(mesh);
     const size = bbox.getSize(new THREE.Vector3());
     console.log(`[CharacterRenderer] Mesh size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
     console.log(`[CharacterRenderer] Mesh bounds: ${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)} ~ ${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)}`);
 
-    // STEP 1: 원래 중심 Y 계산 (스케일 하기 전)
+    // STEP 1: 원래 중심 Y 계산
     const originalCenterY = (bbox.min.y + bbox.max.y) / 2;
     console.log(`[CharacterRenderer] Original center Y: ${originalCenterY.toFixed(2)}`);
 
-    // STEP 2: 메시를 보이는 크기로 스케일 조정 (FBX가 너무 작을 수 있음)
-    const targetHeight = 350; // 350 단위 높이로 설정 (화면의 약 60%)
+    // STEP 2: 루트 객체를 스케일 조정 (메시와 뼈대가 함께 커지도록)
+    const targetHeight = 350; // 350 단위 높이로 설정
     const scale = targetHeight / size.y;
-    mesh.scale.multiplyScalar(scale);
-    console.log(`[CharacterRenderer] Applied scale: ${scale.toFixed(2)}x`);
 
-    // STEP 3: 메시 지오메트리의 중심을 mesh.position의 원점으로 이동
-    mesh.geometry.translate(0, -originalCenterY, 0);
-    console.log(`[CharacterRenderer] Translated geometry by Y offset: ${-originalCenterY.toFixed(2)}`);
+    // 루트 객체에 스케일 적용
+    root.scale.setScalar(scale);
+    console.log(`[CharacterRenderer] Applied scale to ROOT: ${scale.toFixed(2)}x`);
 
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-    this.scene.add(mesh);
+    // STEP 3: 위치 조정 (Geometry 변경 대신 루트 위치 이동)
+    // 스케일이 적용되었으므로 오프셋도 스케일링해야 함
+    // 바닥(0)에 발이 닿게 하려면: -minY * scale
+    // 중앙에 오게 하려면: -centerY * scale
+
+    // 여기서는 바닥(0)에 맞추는 것을 목표로 함 (bbox.min.y가 발바닥이라고 가정)
+    // 하지만 FBX마다 원점이 다를 수 있음. 보통 (0,0,0)이 발바닥 사이.
+
+    // 안전하게 (0,0,0) 위치로 추가
+    root.position.set(0, 0, 0);
+
+    // 그림자 설정
+    root.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    this.scene.add(root);
 
     // --- DEBUG: Add reference cubes to verify scene scale and visibility ---
     // Red Cube at (0,0,0) - Center
